@@ -34,5 +34,5 @@ chmod +x awg.sh
 ```bash
 ./awg.sh
 ```
-Скрипт проведёт вас через настройку сервера и создаст первый клиент VPN.  
-Скрипт основан на работе [RomikB](https://github.com/RomikB/amneziawg-install)и доработан для стабильной работы на современных версиях Debian и Ubuntu
+Скрипт создаст первый клиент.  
+Скрипт основан на работе [RomikB](https://github.com/RomikB/amneziawg-install) и доработан для стабильной работы на современных версиях Debian и Ubuntu
