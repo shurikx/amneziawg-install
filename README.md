@@ -34,5 +34,4 @@ chmod +x awg.sh
 ```bash
 ./awg.sh
 ```
-Скрипт создаст первый клиент.  
 Скрипт основан на работе [RomikB](https://github.com/RomikB/amneziawg-install) и доработан для стабильной работы на современных версиях Debian и Ubuntu
