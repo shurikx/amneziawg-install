@@ -26,11 +26,11 @@ curl -O https://raw.githubusercontent.com/shurikx/amneziawg-install/main/awg.sh
 ```bash
 wget https://raw.githubusercontent.com/shurikx/amneziawg-install/main/awg.sh
 ```
-Установите права доступа:
+Сделайте скрипт исполняемым:
 ```bash
 chmod +x awg.sh
 ```
-И выполните:
+Запустить скрипт:
 ```bash
 ./awg.sh
 ```
