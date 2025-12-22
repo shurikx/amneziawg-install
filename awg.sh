@@ -315,7 +315,7 @@ function installAmneziaWG() {
 
             depmod -a
             modprobe amneziawg
-			
+			#
 			echo "amneziawg" | tee /etc/modules-load.d/awg.conf >/dev/null
 			modprobe amneziawg
 			mkdir -p /etc/systemd/system/awg-quick@.service.d
@@ -325,7 +325,7 @@ After=network-online.target
 Wants=network-online.target
 EOF
 			systemctl daemon-reexec
-			
+			#
         else
             # Debian 12 и ниже: DKMS
             MODULE_NAME="amneziawg"
