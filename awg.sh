@@ -130,6 +130,22 @@ function readS1AndS2() {
 	done
 }
 
+function generateS3AndS4() {
+	RANDOM_AWG_S3=$(shuf -i0-928 -n1)
+	RANDOM_AWG_S4=$(shuf -i0-928 -n1)
+}
+
+function readS3AndS4() {
+	SERVER_AWG_S3=-1
+	SERVER_AWG_S4=-1
+	until [[ ${SERVER_AWG_S3} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_S3} >= 0 )) && (( ${SERVER_AWG_S3} <= 928 )); do
+        read -rp "Server AmneziaWG S3 [0-928]: " -e -i ${RANDOM_AWG_S3} SERVER_AWG_S3
+    done
+	until [[ ${SERVER_AWG_S4} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_S4} >= 0 )) && (( ${SERVER_AWG_S4} <= 928 )); do
+        read -rp "Server AmneziaWG S4 [0-928]: " -e -i ${RANDOM_AWG_S4} SERVER_AWG_S4
+    done
+}
+
 function generateH1AndH2AndH3AndH4() {
 	RANDOM_AWG_H1=$(shuf -i5-2147483647 -n1)
 	RANDOM_AWG_H2=$(shuf -i5-2147483647 -n1)
@@ -252,6 +268,18 @@ function installQuestions() {
 		echo "AmneziaWG require S1 + 56 <> S2"
 		readS1AndS2
 	done
+	
+	# S3 && S4
+	generateS3AndS4
+	while (( RANDOM_AWG_S3 + 148 == RANDOM_AWG_S4 )); do
+		generateS3AndS4
+	done
+
+	readS3AndS4
+	while (( SERVER_AWG_S3 + 148 == SERVER_AWG_S4 )); do
+		echo "AmneziaWG require S3 + 148 <> S4"
+		readS3AndS4
+	done
 
 	# H1 && H2 && H3 && H4
 	generateH1AndH2AndH3AndH4
@@ -292,7 +320,7 @@ function installAmneziaWG() {
     elif [[ ${OS} == 'debian' ]]; then
         echo -e "${GREEN}Installing AmneziaWG on Debian...${NC}"
         apt-get update
-        apt-get install -y git build-essential linux-headers-amd64 \
+        apt-get install -y git build-essential linux-headers-$(uname -r) \
             libmnl-dev libelf-dev qrencode ${NF_PACKAGE} pkg-config
 
         DEBIAN_VERSION=$(grep -oP '(?<=VERSION_ID=")\d+' /etc/os-release)
@@ -318,31 +346,41 @@ function installAmneziaWG() {
 
         else
             # Debian 12 и ниже: DKMS
-            MODULE_NAME="amneziawg"
-            MODULE_VERSION="1.0.0"
-            DEST_SRC="/usr/src/${MODULE_NAME}-${MODULE_VERSION}"
+        echo -e "${GREEN}Debian ${DEBIAN_VERSION}: DKMS build${NC}"
 
-            mkdir -p "$DEST_SRC"
-            cp -r "$WORKDIR/amneziawg-linux-kernel-module/src" "$DEST_SRC/"
+        MODULE_NAME="amneziawg"
 
-            if dkms status | grep -q "${MODULE_NAME}, ${MODULE_VERSION}"; then
-                dkms remove -m ${MODULE_NAME} -v ${MODULE_VERSION} --all
-            fi
+        cd "$WORKDIR/amneziawg-linux-kernel-module" || exit 1
 
-            cat > "${DEST_SRC}/dkms.conf" <<'EOF'
-PACKAGE_NAME="amneziawg"
-PACKAGE_VERSION="1.0.0"
-BUILT_MODULE_NAME[0]="amneziawg"
+        # Автоверсия из git-тега или даты
+        MODULE_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || date +%Y%m%d%H%M)
+
+        DEST_SRC="/usr/src/${MODULE_NAME}-${MODULE_VERSION}"
+
+        mkdir -p "$DEST_SRC"
+        cp -r src "$DEST_SRC/"
+
+        # Удаляем эту же версию, если уже была
+        if dkms status | grep -q "${MODULE_NAME}, ${MODULE_VERSION}"; then
+            dkms remove -m ${MODULE_NAME} -v ${MODULE_VERSION} --all
+        fi
+
+        cat > "${DEST_SRC}/dkms.conf" <<EOF
+PACKAGE_NAME="${MODULE_NAME}"
+PACKAGE_VERSION="${MODULE_VERSION}"
+BUILT_MODULE_NAME[0]="${MODULE_NAME}"
 DEST_MODULE_LOCATION[0]="/kernel/drivers/net"
 MAKE[0]="make -C src"
 CLEAN="make -C src clean"
 AUTOINSTALL="yes"
 EOF
 
-            dkms add -m ${MODULE_NAME} -v ${MODULE_VERSION}
-            dkms build -m ${MODULE_NAME} -v ${MODULE_VERSION}
-            dkms install -m ${MODULE_NAME} -v ${MODULE_VERSION}
-        fi
+        dkms add -m ${MODULE_NAME} -v ${MODULE_VERSION}
+        dkms build -m ${MODULE_NAME} -v ${MODULE_VERSION}
+        dkms install -m ${MODULE_NAME} -v ${MODULE_VERSION}
+
+        modprobe ${MODULE_NAME}
+    fi
 
         # Сборка пользовательских инструментов
         cd "$WORKDIR/amneziawg-tools/src" || exit 1
@@ -378,6 +416,8 @@ SERVER_AWG_JMIN=${SERVER_AWG_JMIN}
 SERVER_AWG_JMAX=${SERVER_AWG_JMAX}
 SERVER_AWG_S1=${SERVER_AWG_S1}
 SERVER_AWG_S2=${SERVER_AWG_S2}
+SERVER_AWG_S3=${SERVER_AWG_S3}
+SERVER_AWG_S4=${SERVER_AWG_S4}
 SERVER_AWG_H1=${SERVER_AWG_H1}
 SERVER_AWG_H2=${SERVER_AWG_H2}
 SERVER_AWG_H3=${SERVER_AWG_H3}
@@ -393,6 +433,8 @@ Jmin = ${SERVER_AWG_JMIN}
 Jmax = ${SERVER_AWG_JMAX}
 S1 = ${SERVER_AWG_S1}
 S2 = ${SERVER_AWG_S2}
+S3 = ${SERVER_AWG_S3}
+S4 = ${SERVER_AWG_S4}
 H1 = ${SERVER_AWG_H1}
 H2 = ${SERVER_AWG_H2}
 H3 = ${SERVER_AWG_H3}
@@ -538,6 +580,8 @@ Jmin = ${SERVER_AWG_JMIN}
 Jmax = ${SERVER_AWG_JMAX}
 S1 = ${SERVER_AWG_S1}
 S2 = ${SERVER_AWG_S2}
+S3 = ${SERVER_AWG_S3}
+S4 = ${SERVER_AWG_S4}
 H1 = ${SERVER_AWG_H1}
 H2 = ${SERVER_AWG_H2}
 H3 = ${SERVER_AWG_H3}
@@ -669,27 +713,39 @@ function uninstallAmneziaWG() {
     checkOS
 
     MODULE_NAME="amneziawg"
-    MODULE_VERSION="1.0.0"
 
-    # Выгружаем модуль ядра, если загружен
-    if lsmod | grep -q "${MODULE_NAME}"; then
-        echo -e "${GREEN}Unloading kernel module ${MODULE_NAME}...${NC}"
-        modprobe -r "${MODULE_NAME}" 2>/dev/null || true
-    fi
-
-    # Останавливаем и отключаем сервис
+    # Останавливаем сервис (если есть)
     if [[ -n "$SERVER_AWG_NIC" ]]; then
         systemctl stop "awg-quick@${SERVER_AWG_NIC}" 2>/dev/null || true
         systemctl disable "awg-quick@${SERVER_AWG_NIC}" 2>/dev/null || true
         rm -f /etc/systemd/system/multi-user.target.wants/awg-quick@${SERVER_AWG_NIC}.service
     fi
 
-    # Удаляем DKMS-модуль, если он установлен
-    if dkms status | grep -q "${MODULE_NAME}"; then
-        echo -e "${GREEN}Removing DKMS module ${MODULE_NAME}...${NC}"
-        dkms remove -m "${MODULE_NAME}" -v "${MODULE_VERSION}" --all 2>/dev/null || true
+    # Выгружаем модуль ядра
+    if lsmod | grep -q "^${MODULE_NAME}"; then
+        echo -e "${GREEN}Unloading kernel module ${MODULE_NAME}...${NC}"
+        modprobe -r "${MODULE_NAME}" 2>/dev/null || true
     fi
-    rm -rf "/usr/src/${MODULE_NAME}-${MODULE_VERSION}"
+
+    # ===== DKMS: удаляем ВСЕ версии (если есть) =====
+    if command -v dkms &>/dev/null && dkms status | grep -q "^${MODULE_NAME}"; then
+        echo -e "${GREEN}Removing all DKMS versions of ${MODULE_NAME}...${NC}"
+
+        dkms status | grep "^${MODULE_NAME}" | while read -r line; do
+            MODULE_VERSION=$(echo "$line" | cut -d',' -f2 | awk '{print $1}')
+
+            dkms remove -m "${MODULE_NAME}" -v "${MODULE_VERSION}" --all 2>/dev/null || true
+            rm -rf "/usr/src/${MODULE_NAME}-${MODULE_VERSION}"
+        done
+    fi
+
+    # ===== Debian 13+: удаляем вручную установленный .ko =====
+    KERNEL_DIR="/lib/modules/$(uname -r)/kernel/drivers/net"
+    if [[ -f "${KERNEL_DIR}/${MODULE_NAME}.ko" ]]; then
+        echo -e "${GREEN}Removing kernel module file...${NC}"
+        rm -f "${KERNEL_DIR}/${MODULE_NAME}.ko"
+        depmod -a
+    fi
 
     # Удаляем бинарники, man и bash-completion
     for file in /usr/bin/awg /usr/bin/awg-quick \
@@ -699,13 +755,13 @@ function uninstallAmneziaWG() {
         [[ -f "$file" ]] && rm -f "$file"
     done
 
-    # Удаляем systemd-сервисы
+    # Удаляем systemd unit-файлы
     for svc in /lib/systemd/system/awg-quick@.service /lib/systemd/system/awg-quick.target; do
         [[ -f "$svc" ]] && rm -f "$svc"
     done
     systemctl daemon-reload
 
-    # Удаляем конфиги и sysctl
+    # Удаляем sysctl и конфиги
     [[ -f /etc/sysctl.d/awg.conf ]] && rm -f /etc/sysctl.d/awg.conf
     [[ -d "${AMNEZIAWG_DIR}" ]] && rm -rf "${AMNEZIAWG_DIR}"
     sysctl --system
@@ -715,9 +771,9 @@ function uninstallAmneziaWG() {
         ip link delete "${SERVER_AWG_NIC}" 2>/dev/null || true
     fi
 
-    # Удаляем пакеты через apt для Ubuntu/Debian
+    # Удаляем пакеты (если ставились)
     if [[ ${OS} == 'ubuntu' || ${OS} == 'debian' ]]; then
-        echo -e "${GREEN}Removing AmneziaWG packages...${NC}"
+        echo -e "${GREEN}Removing AmneziaWG packages (if any)...${NC}"
         apt-get purge -y amneziawg amneziawg-tools 2>/dev/null || true
         apt-get autoremove -y 2>/dev/null || true
     fi
@@ -736,7 +792,7 @@ function manageMenu() {
 	echo "It looks like AmneziaWG is already installed."
 	echo ""
 	echo "What do you want to do?"
-	echo "   1) Add a new user"
+	echo "   1) Add a new user"
 	echo "   2) List all users"
 	echo "   3) Statistics awg"
 	echo "   4) Revoke existing user"
@@ -772,7 +828,6 @@ function manageMenu() {
 		;;
 	esac
 }
-
 
 # Check for root, virt, OS...
 initialCheck
