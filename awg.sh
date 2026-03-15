@@ -131,18 +131,18 @@ function readS1AndS2() {
 }
 
 function generateS3AndS4() {
-	RANDOM_AWG_S3=$(shuf -i0-928 -n1)
-	RANDOM_AWG_S4=$(shuf -i0-928 -n1)
+	RANDOM_AWG_S3=$(shuf -i0-256 -n1)
+	RANDOM_AWG_S4=$(shuf -i0-32 -n1)
 }
 
 function readS3AndS4() {
 	SERVER_AWG_S3=-1
 	SERVER_AWG_S4=-1
-	until [[ ${SERVER_AWG_S3} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_S3} >= 0 )) && (( ${SERVER_AWG_S3} <= 928 )); do
-        read -rp "Server AmneziaWG S3 [0-928]: " -e -i ${RANDOM_AWG_S3} SERVER_AWG_S3
+	until [[ ${SERVER_AWG_S3} =~ ^[0-9]+$ ]] && (( SERVER_AWG_S3 >= 0 )) && (( SERVER_AWG_S3 <= 256 )); do
+        read -rp "Server AmneziaWG S3 [0-256]: " -e -i ${RANDOM_AWG_S3} SERVER_AWG_S3
     done
-	until [[ ${SERVER_AWG_S4} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_S4} >= 0 )) && (( ${SERVER_AWG_S4} <= 928 )); do
-        read -rp "Server AmneziaWG S4 [0-928]: " -e -i ${RANDOM_AWG_S4} SERVER_AWG_S4
+	until [[ ${SERVER_AWG_S4} =~ ^[0-9]+$ ]] && (( SERVER_AWG_S4 >= 0 )) && (( SERVER_AWG_S4 <= 32 )); do
+        read -rp "Server AmneziaWG S4 [0-32]: " -e -i ${RANDOM_AWG_S4} SERVER_AWG_S4
     done
 }
 
@@ -269,17 +269,9 @@ function installQuestions() {
 		readS1AndS2
 	done
 	
-	# S3 && S4
+	# S4
 	generateS3AndS4
-	while (( RANDOM_AWG_S3 + 148 == RANDOM_AWG_S4 )); do
-		generateS3AndS4
-	done
-
 	readS3AndS4
-	while (( SERVER_AWG_S3 + 148 == SERVER_AWG_S4 )); do
-		echo "AmneziaWG require S3 + 148 <> S4"
-		readS3AndS4
-	done
 
 	# H1 && H2 && H3 && H4
 	generateH1AndH2AndH3AndH4
